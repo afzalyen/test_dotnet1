@@ -1,4 +1,4 @@
-namespace test_dotnet1.Models
+namespace test_dotnet1_Models.Models
 {
     public class ErrorViewModel
     {
