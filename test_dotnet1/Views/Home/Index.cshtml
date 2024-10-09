@@ -1,8 +1,29 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-}
-
-<div class="text-center">
-    <h1 class="display-4">Welcome Afzal Hossain Yen 123 ... ...</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+﻿@model IEnumerable<Question>
+<a asp-action="AskQuestion" class="btn btn-primary">Ask Question</a>
+<h2>Recent Questions</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Created At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var question in Model)
+        {
+            <tr>
+                <td>
+                    <a asp-action="AnswerQuestion" asp-route-id="@question.Id">@question.Title</a>
+                </td>
+                <td>@question.CreatedAt.ToShortDateString()</td>
+                <td>
+                    <form asp-action="DeleteQuestion" method="post" style="display:inline;">
+                        <input type="hidden" name="id" value="@question.Id" />
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
