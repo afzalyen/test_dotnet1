@@ -29,5 +29,6 @@ public class ApplicationUserConfig : IEntityTypeConfiguration<ApplicationUser>
     {
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Email).IsRequired().HasMaxLength(256);
+        builder.Property(u => u.UserType).IsRequired();
     }
 }
