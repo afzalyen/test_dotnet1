@@ -102,6 +102,9 @@ namespace test_dotnet1.Areas.Identity.Pages.Account
 
             [Required]
             public UserType UserType { get; set; }
+            public string? Name { get; set; }
+            public string? InstituteName { get; set; }
+            public string? InstituteIDCardNo { get; set; }
         }
 
 
@@ -122,6 +125,12 @@ namespace test_dotnet1.Areas.Identity.Pages.Account
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
                 user.UserType = Input.UserType;
+                if (user.UserType == UserType.Student)
+                {
+                    user.Name = Input.Name;
+                    user.InstituteName = Input.InstituteName;
+                    user.InstituteIDCardNo = Input.InstituteIDCardNo;
+                }
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
 

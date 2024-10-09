@@ -27,15 +27,34 @@
                 <label asp-for="Input.ConfirmPassword"></label>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
-            <div class="form-floating">
-                <select asp-for="Input.UserType" class="form-control">
-                    <option value="">-- Select User Type --</option>
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
-                </select>
-                <label asp-for="Input.UserType">User Type</label>
-                <span asp-validation-for="Input.UserType" class="text-danger"></span>
+            <div class="form-check">
+                <input asp-for="Input.UserType" class="form-check-input" type="radio" value="Student" id="studentRadio">
+                <label class="form-check-label" for="studentRadio">Student</label>
             </div>
+                        <div class="form-check">
+                <input asp-for="Input.UserType" class="form-check-input" type="radio" value="Teacher" id="teacherRadio">
+                <label class="form-check-label" for="teacherRadio">Teacher</label>
+            </div>
+
+            <!-- Student-specific fields -->
+            <div id="studentFields" style="display:none;">
+                <div class="form-floating">
+                    <input asp-for="Input.Name" class="form-control" />
+                    <label asp-for="Input.Name">Name</label>
+                    <span asp-validation-for="Input.Name" class="text-danger"></span>
+                </div>
+                <div class="form-floating">
+                    <input asp-for="Input.InstituteName" class="form-control" />
+                    <label asp-for="Input.InstituteName">Institute Name</label>
+                    <span asp-validation-for="Input.InstituteName" class="text-danger"></span>
+                </div>
+                <div class="form-floating">
+                    <input asp-for="Input.InstituteIDCardNo" class="form-control" />
+                    <label asp-for="Input.InstituteIDCardNo">Institute ID Card No</label>
+                    <span asp-validation-for="Input.InstituteIDCardNo" class="text-danger"></span>
+                </div>
+            </div>
+
             <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </form>
     </div>
@@ -73,4 +92,24 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Show or hide student-specific fields based on the selected UserType
+            $('#studentRadio').on('change', function() {
+                $('#studentFields').show();
+            });
+
+            $('#teacherRadio').on('change', function() {
+                $('#studentFields').hide();
+            });
+
+            // Initial check to set fields display if the page is reloaded
+            if ($('#studentRadio').is(':checked')) {
+                $('#studentFields').show();
+            } else {
+                $('#studentFields').hide();
+            }
+        });
+    </script>
 }

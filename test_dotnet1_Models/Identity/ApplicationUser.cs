@@ -10,6 +10,9 @@ namespace test_dotnet1_Models.Identity;
 public class ApplicationUser : IdentityUser
 {
     public UserType UserType { get; set; }
+    public string? Name { get; set; }
+    public string? InstituteName { get; set; }
+    public string? InstituteIDCardNo { get; set; }
 }
 
 public enum UserType
