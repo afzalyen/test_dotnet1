@@ -67,16 +67,16 @@ namespace test_dotnet1.Controllers
             return RedirectToAction("Index");
         }
 
-        [Authorize]
-        public IActionResult AnswerQuestion(int id)
-        {
-            var question = _context.Questions.Find(id);
-            if (question == null)
-            {
-                return NotFound();
-            }
-            return View("~/Views/Questions/AnswerQuestion.cshtml", question); // Specify the path to the AnswerQuestion view
-        }
+        //[Authorize]
+        //public IActionResult AnswerQuestion(int id)
+        //{
+        //    var question = _context.Questions.Find(id);
+        //    if (question == null)
+        //    {
+        //        return NotFound();
+        //    }
+        //    return View("~/Views/Questions/AnswerQuestion.cshtml", question); // Specify the path to the AnswerQuestion view
+        //}
 
         [HttpPost]
         [Authorize]
@@ -97,5 +97,70 @@ namespace test_dotnet1.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+
+        public IActionResult AnswerQuestion(int id)
+        {
+            var question = _context.Questions
+                .Include(q => q.Answers) // Assuming you want to include answers
+                .FirstOrDefault(q => q.Id == id);
+
+            if (question == null)
+            {
+                return NotFound();
+            }
+
+            return View("~/Views/Questions/AnswerQuestion.cshtml", question); // Changed this line
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> SubmitAnswer(Answer answer)
+        {
+            answer.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (ModelState.IsValid)
+            {
+                // Set user ID and timestamp
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                answer.UserId = userId;
+                answer.CreatedAt = DateTime.Now;
+
+                // Add the answer to the context
+                _context.Answers.Add(answer);
+
+                try
+                {
+                    // Attempt to save changes to the database
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine("Answer successfully saved.");
+                    return RedirectToAction("AnswerQuestion", new { id = answer.QuestionId });
+                }
+                catch (Exception ex)
+                {
+                    // Log any database errors
+                    Console.WriteLine($"Error saving answer: {ex.Message}");
+                    _logger.LogError($"Error saving answer: {ex.Message}");
+                }
+            }
+            else
+            {
+                // Log ModelState errors for debugging
+                foreach (var state in ModelState)
+                {
+                    foreach (var error in state.Value.Errors)
+                    {
+                        Console.WriteLine($"Model state error in {state.Key}: {error.ErrorMessage}");
+                        _logger.LogError($"Model state error in {state.Key}: {error.ErrorMessage}");
+                    }
+                }
+            }
+
+            // If ModelState is invalid or save fails, reload the question and answers
+            var question = _context.Questions
+                                   .Include(q => q.Answers)
+                                   .FirstOrDefault(q => q.Id == answer.QuestionId);
+            return View("~/Views/Questions/AnswerQuestion.cshtml", question);
+        }
     }
 }
+
