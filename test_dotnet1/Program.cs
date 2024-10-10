@@ -34,6 +34,9 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error"); // Error handling for production
 }
 
+
+
+
 // Middleware configuration
 app.UseStaticFiles();
 app.UseRouting();

@@ -1,5 +1,13 @@
 ﻿@model IEnumerable<Question>
-<a asp-action="AskQuestion" class="btn btn-primary">Ask Question</a>
+@using test_dotnet1_Models.Identity
+
+@{
+    var userType = (UserType)ViewData["UserType"];
+}
+@if (userType != UserType.Teacher)
+{
+    <a asp-action="AskQuestion" class="btn btn-primary">Ask Question</a>
+}
 <h2>Recent Questions</h2>
 <table>
     <thead>
@@ -27,3 +35,5 @@
         }
     </tbody>
 </table>
+
+                   

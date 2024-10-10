@@ -6,6 +6,9 @@ using test_dotnet_Data_Access; // Ensure this matches your data access layer nam
 using test_dotnet_Data_Access.Identity;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Identity;
+using test_dotnet1_Models.Identity;
 
 namespace test_dotnet1.Controllers
 {
@@ -13,16 +16,30 @@ namespace test_dotnet1.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public HomeController(ILogger<HomeController> logger, ApplicationDbContext context)
+        public HomeController(ILogger<HomeController> logger, ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _logger = logger;
             _context = context;
+            _userManager = userManager;
         }
 
-        public IActionResult Index()
+        private async Task<UserType> GetCurrentUserTypeAsync()
         {
-            var questions = _context.Questions.ToList(); // Fetch the list of questions from the database
+            var user = await _userManager.GetUserAsync(User);
+            return user?.UserType ?? UserType.Student;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var userType = await GetCurrentUserTypeAsync();
+            _logger.LogInformation("##################");
+            _logger.LogInformation("isTeacher: {isTeacher}", userType == UserType.Teacher);
+
+            ViewData["UserType"] = userType;
+
+            var questions = _context.Questions.ToList();
             return View(questions);
         }
 
@@ -31,26 +48,36 @@ namespace test_dotnet1.Controllers
             return View();
         }
 
-        [Authorize] // Ensure only authorized users can access the AskQuestion functionality
-        public IActionResult AskQuestion()
+        [Authorize]
+        public async Task<IActionResult> AskQuestion()
         {
-            return View("~/Views/Questions/AskQuestion.cshtml"); // Specify the path to the AskQuestion view
+            var userType = await GetCurrentUserTypeAsync();
+            if (userType == UserType.Teacher)
+            {
+                return Forbid(); // Teachers cannot ask questions
+            }
+
+            return View("~/Views/Questions/AskQuestion.cshtml");
         }
 
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public IActionResult AskQuestion(Question question)
+        public async Task<IActionResult> AskQuestion(Question question)
         {
+            var userType = await GetCurrentUserTypeAsync();
+            if (userType == UserType.Teacher)
+            {
+                return Forbid();
+            }
+
             question.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!ModelState.IsValid)
             {
-                // Log validation errors for debugging
                 foreach (var state in ModelState)
                 {
                     foreach (var error in state.Value.Errors)
                     {
-                        Console.WriteLine($"Error in {state.Key}: {error.ErrorMessage}");
                         _logger.LogError($"Error in {state.Key}: {error.ErrorMessage}");
                     }
                 }
@@ -58,38 +85,58 @@ namespace test_dotnet1.Controllers
             }
 
             question.CreatedAt = DateTime.Now;
-            question.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             _context.Questions.Add(question);
-            //_context.SaveChanges();
-            int result = _context.SaveChanges(); // Save changes to the database
-            _logger.LogInformation($"{result} question(s) saved to the database.");
-            Console.WriteLine($"{result} question(s) saved to the database.");
+            await _context.SaveChangesAsync();
             return RedirectToAction("Index");
         }
 
-        //[Authorize]
-        //public IActionResult AnswerQuestion(int id)
-        //{
-        //    var question = _context.Questions.Find(id);
-        //    if (question == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    return View("~/Views/Questions/AnswerQuestion.cshtml", question); // Specify the path to the AnswerQuestion view
-        //}
+        public IActionResult AnswerQuestion(int id)
+        {
+            var question = _context.Questions
+                .Include(q => q.Answers)
+                .FirstOrDefault(q => q.Id == id);
+
+            if (question == null)
+            {
+                return NotFound();
+            }
+            // Get the UserType of the current user and set it in ViewData
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+            ViewData["UserType"] = user?.UserType;
+
+            return View("~/Views/Questions/AnswerQuestion.cshtml", question);
+
+           
+        }
 
         [HttpPost]
         [Authorize]
-        public IActionResult AnswerQuestion(Answer answer)
+        public async Task<IActionResult> SubmitAnswer(Answer answer)
         {
+            var userType = await GetCurrentUserTypeAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var question = await _context.Questions.FindAsync(answer.QuestionId);
+
+            if (userType != UserType.Teacher && question.UserId != userId)
+            {
+                return Forbid(); // Only the teacher or the student who asked the question can submit an answer
+            }
+
             if (ModelState.IsValid)
             {
+                answer.UserId = userId;
+                answer.CreatedAt = DateTime.Now;
+
                 _context.Answers.Add(answer);
-                _context.SaveChanges();
-                return RedirectToAction("Index");
+                await _context.SaveChangesAsync();
+                return RedirectToAction("AnswerQuestion", new { id = answer.QuestionId });
             }
-            // If model state is invalid, return the same view with the model
-            return View("~/Views/Questions/AnswerQuestion.cshtml", answer); // Specify the path in case of invalid model
+
+            var questionWithAnswers = _context.Questions
+                                               .Include(q => q.Answers)
+                                               .FirstOrDefault(q => q.Id == answer.QuestionId);
+            return View("~/Views/Questions/AnswerQuestion.cshtml", questionWithAnswers);
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
@@ -97,70 +144,5 @@ namespace test_dotnet1.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
-
-
-        public IActionResult AnswerQuestion(int id)
-        {
-            var question = _context.Questions
-                .Include(q => q.Answers) // Assuming you want to include answers
-                .FirstOrDefault(q => q.Id == id);
-
-            if (question == null)
-            {
-                return NotFound();
-            }
-
-            return View("~/Views/Questions/AnswerQuestion.cshtml", question); // Changed this line
-        }
-
-
-        [HttpPost]
-        public async Task<IActionResult> SubmitAnswer(Answer answer)
-        {
-            answer.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (ModelState.IsValid)
-            {
-                // Set user ID and timestamp
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                answer.UserId = userId;
-                answer.CreatedAt = DateTime.Now;
-
-                // Add the answer to the context
-                _context.Answers.Add(answer);
-
-                try
-                {
-                    // Attempt to save changes to the database
-                    await _context.SaveChangesAsync();
-                    Console.WriteLine("Answer successfully saved.");
-                    return RedirectToAction("AnswerQuestion", new { id = answer.QuestionId });
-                }
-                catch (Exception ex)
-                {
-                    // Log any database errors
-                    Console.WriteLine($"Error saving answer: {ex.Message}");
-                    _logger.LogError($"Error saving answer: {ex.Message}");
-                }
-            }
-            else
-            {
-                // Log ModelState errors for debugging
-                foreach (var state in ModelState)
-                {
-                    foreach (var error in state.Value.Errors)
-                    {
-                        Console.WriteLine($"Model state error in {state.Key}: {error.ErrorMessage}");
-                        _logger.LogError($"Model state error in {state.Key}: {error.ErrorMessage}");
-                    }
-                }
-            }
-
-            // If ModelState is invalid or save fails, reload the question and answers
-            var question = _context.Questions
-                                   .Include(q => q.Answers)
-                                   .FirstOrDefault(q => q.Id == answer.QuestionId);
-            return View("~/Views/Questions/AnswerQuestion.cshtml", question);
-        }
     }
 }
-

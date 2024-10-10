@@ -1,5 +1,6 @@
 ﻿@using System.Security.Claims;
 @using test_dotnet1_Models.Models
+@using test_dotnet1_Models.Identity // For UserType enum
 @model test_dotnet1_Models.Models.Question
 
 <h2>Question: @Model.Title</h2>
@@ -18,8 +19,9 @@
     }
 </ul>
 
-@* @if (User.IsInRole("Teacher") || User.FindFirstValue(ClaimTypes.NameIdentifier) == @Model.UserId)
-{ *@
+@* Check if the user is a teacher or the question asker *@
+@if (ViewData["UserType"]?.ToString() == UserType.Teacher.ToString() || User.FindFirstValue(ClaimTypes.NameIdentifier) == @Model.UserId)
+{
     <h3>Submit Your Answer</h3>
     <form asp-action="SubmitAnswer" method="post">
         @Html.AntiForgeryToken()
@@ -30,7 +32,7 @@
         </div>
         <button type="submit">Submit Answer</button>
     </form>
-@* } *@
+}
 
 @section Scripts {
     @{
