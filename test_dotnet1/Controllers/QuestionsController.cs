@@ -30,31 +30,31 @@ public class QuestionsController : Controller
         return View(questions);
     }
 
-    [HttpGet]
-    [Authorize(Roles = "Student")]
-    public IActionResult AskQuestion()
-    {
-        return View();
-    }
+    //[HttpGet]
+    //[Authorize(Roles = "Student")]
+    //public IActionResult AskQuestion()
+    //{
+    //    return View();
+    //}
 
-    [HttpPost]
-    [Authorize(Roles = "Student")]
-    public async Task<IActionResult> AskQuestion(Question question)
-    {
-        if (ModelState.IsValid)
-        {
-            question.UserId = _userManager.GetUserId(User);
-            question.CreatedAt = DateTime.Now;
-            question.IsAnswered = false;
-            question.IsDeleted = false;
+    //[HttpPost]
+    //[Authorize(Roles = "Student")]
+    //public async Task<IActionResult> AskQuestion(Question question)
+    //{
+    //    if (ModelState.IsValid)
+    //    {
+    //        question.UserId = _userManager.GetUserId(User);
+    //        question.CreatedAt = DateTime.Now;
+    //        question.IsAnswered = false;
+    //        question.IsDeleted = false;
 
-            _context.Questions.Add(question);
-            await _context.SaveChangesAsync();
+    //        _context.Questions.Add(question);
+    //        await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index));
-        }
-        return View(question);
-    }
+    //        return RedirectToAction(nameof(Index));
+    //    }
+    //    return View(question);
+    //}
 
     [HttpGet]
     [Authorize(Roles = "Teacher")]

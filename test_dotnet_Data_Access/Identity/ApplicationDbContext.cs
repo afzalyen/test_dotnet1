@@ -15,7 +15,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         : base(options)
     {
     }
-    public DbSet<Question> Questions { get; set; }
+    public DbSet<Question> Questions { get; set; } = null!;
     public DbSet<Answer> Answers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)

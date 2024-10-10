@@ -39,17 +39,32 @@ namespace test_dotnet1.Controllers
 
         [HttpPost]
         [Authorize]
+        [ValidateAntiForgeryToken]
         public IActionResult AskQuestion(Question question)
         {
-            if (ModelState.IsValid)
+            question.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!ModelState.IsValid)
             {
-                question.CreatedAt = DateTime.Now;
-                question.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier); // Assuming the user is logged in
-                _context.Questions.Add(question);
-                _context.SaveChanges();
-                return RedirectToAction("Index");
+                // Log validation errors for debugging
+                foreach (var state in ModelState)
+                {
+                    foreach (var error in state.Value.Errors)
+                    {
+                        Console.WriteLine($"Error in {state.Key}: {error.ErrorMessage}");
+                        _logger.LogError($"Error in {state.Key}: {error.ErrorMessage}");
+                    }
+                }
+                return View("~/Views/Questions/AskQuestion.cshtml", question);
             }
-            return View("~/Views/Questions/AskQuestion.cshtml", question); // Specify the path again in case of invalid model
+
+            question.CreatedAt = DateTime.Now;
+            question.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            _context.Questions.Add(question);
+            //_context.SaveChanges();
+            int result = _context.SaveChanges(); // Save changes to the database
+            _logger.LogInformation($"{result} question(s) saved to the database.");
+            Console.WriteLine($"{result} question(s) saved to the database.");
+            return RedirectToAction("Index");
         }
 
         [Authorize]
